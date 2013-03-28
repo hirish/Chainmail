@@ -13,9 +13,9 @@ class Cookies:
 			self.cookies[key] = value
 	
 	def __str__(self):
-		return "<Cookies: %s>" % self.cookie_string()
+		return "<Cookies: %s>" % self.reform()
 	
-	def cookie_string(self, keys = None):
+	def reform(self, keys = None):
 		# Turn the cookie dictionary back into a HTTP compatible string.
 		if keys == None:
 			keys = cookies.keys()

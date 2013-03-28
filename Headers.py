@@ -10,8 +10,8 @@ class Headers:
 
 	def __init__(self, request):
 		# Register parsing functions
-		self.functions['Request'] = self._parse_request
-		self.functions['Cookie'] = self._parse_cookies
+		self.functions['Request'] = (self._parse_request, self._reform_request)
+		self.functions['Cookie'] = (self._parse_cookies, self._reform_cookies)
 
 		# Take the header section of a message
 		unparsed_headers = self.extract_headers(request)
@@ -48,10 +48,30 @@ class Headers:
 
 			# Call a parsing function, if it exists.
 			if header_type in self.functions:
-				self.headers[header_type] = self.functions[header_type](header_values)
+				self.headers[header_type] = self.functions[header_type][0](header_values)
 			# Otherwise just a raw dump.
 			else:
 				self.headers[header_type] = {"value": header_values}
+
+	def reform(self, header_types = None):
+		if header_types == None:
+			header_types = headers.keys()
+
+		# Move request/response header to beginning.
+		if "Request" in header_types:
+			header_types.remove("Request")
+			output = [self.functions['Request'][1]()]
+		elif "Response" in header_types:
+			header_types.remove("Response")
+			output = [self.functions['Response'][1]()]
+
+		for header_type in header_types:
+			try:
+				output.append(self.functions[header_type][1]())
+			except KeyError:
+				output.append("%s: %s" % (header_type, headers[header_type][value]))
+		
+		return "\n".join(output)
 	
 	def _parse_request(self, values):
 		# Requests are of the form 'method url httpversion'
@@ -61,17 +81,43 @@ class Headers:
 		except ValueError:
 			print values
 			exit()
-
+		
+		http_in_url = "http://" in url
 		url = url.replace('http://','')
 		try:
 			host, port = url.split(':', 1)
+			port = int(port)
 		except:
 			host, port = url, 80
 
-		return {'method': method, 'host': host, 'port': port, 'http_version': http_version}
+		return  {
+					'method': method,
+					'host': host,
+					'port': port,
+					'http_version': http_version,
+					'http_in_url': http_in_url
+				}
+
+	def _reform_request(self):
+		method = self.headers['Request']['method']
+		host = self.headers['Request']['host']
+		port = self.headers['Request']['port']
+		http_version = self.headers['Request']['http_version']
+		http_in_url = self.headers['Request']['http_in_url']
+
+		if http_in_url:
+			host = "http://" + host
+
+		if not port == 80:
+			return "%s %s:%s %s" % (method, host, str(port), http_version)
+		else:
+			return "%s %s %s" % (method, host, http_version)
 
 	def _parse_cookies(self, cookie_string):
 		return Cookies(cookie_string)
+
+	def _reform_cookies(self):
+		return self.headers['Cookie'].reform()
 
 
 class HeaderFormatError:

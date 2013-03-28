@@ -61,6 +61,7 @@ class ProxyServer:
 			print "Can't establish connection with server %s." % host
 			print "Closing connection with client %s." % str(clientaddr)
 			connection.client.close()
+		exit()
 
 	def close(self, socket):
 		print socket.getpeername(), "has disconnected"

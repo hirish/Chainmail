@@ -1,5 +1,4 @@
 import socket
-from Headers import Headers, HeaderFormatError
 
 class Connection:
 
@@ -20,46 +19,43 @@ class Connection:
 			print e
 			return False
 
-	def send_data(self, from_socket, data):
+	def send_data(self, from_socket, raw_message_data):
 		'''Takes some data, and the socket it was sent from, then sends the
 		data to the opposite socket'''
+		print raw_message_data
+		print ''
+		message_data = HTTP_message(raw_message_data)
 		if from_socket == self.client:
-			self._send_to_server(data)
+			self._send_to_server(message_data)
 		elif from_socket == self.server:
-			self._send_to_client(data)
+			self._send_to_client(message_data)
 		else:
 			# If it's not from a socket we know, then ProxyServer is broken.
 			print "!!!!!!!!!!!!!!"
-			print data
+			print message_data.reform()
 			print "!!!!!!!!!!!!!!"
 			exit()
 
-	def _send_to_client(self, data):
+	def _send_to_client(self, message_data):
 		'''Send data to the client (initator of connection).'''
-		try:
-			# Extract headers.
-			headers = Headers(data)
-		except HeaderFormatError as e:
-			# Failed to extract headers; we'll just forward as usual.
+		headers = message_data.headers
+		if headers:
 			continue
 
 		# Send data.
-		self.client.send(data)
+		self.client.send(message_data.reform())
 		print "<<<<<<<<<<<<<<"
-		print data
+		print message_data.reform()
 		print "<<<<<<<<<<<<<<"
 	
-	def _send_to_server(self, data):
+	def _send_to_server(self, message_data):
 		''' Send data to the server the client initated the connection to.'''
-		try:
-			# Extract headers.
-			headers = Headers(data)
-		except HeaderFormatError as e:
-			# Failed to extract headers; we'll just forward as usual.
+		headers = message_data.headers
+		if headers:
 			continue
 
 		# Send data.
-		self.server.send(data)
+		self.server.send(message_data.reform())
 		print ">>>>>>>>>>>>>>"
-		print data
+		print message_data.reform()
 		print ">>>>>>>>>>>>>>"
