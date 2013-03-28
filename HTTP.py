@@ -4,14 +4,14 @@ class HTTP_Message:
 
 	def __init__(self, unparsed_message):
 		unparsed_message = unparsed_message.replace('\r\n\r', '\n', 1)
-		headers, data = unparsed_message.split('\n\n', 1)
-		headers = headers.replace('\r', '')
-		
 		try:
+			headers, data = unparsed_message.split('\n\n', 1)
+			headers = headers.replace('\r', '')
 			self.headers = Headers(headers)
-		except HeaderFormatError as e:
-			print e
-
+		except (ValueError, HeaderFormatError) as e:
+			self.headers = Headers("")
+			data = unparsed_message
+		
 		self.data = data
 
 	def reform(self):

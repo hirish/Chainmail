@@ -13,6 +13,9 @@ class Headers:
 		self.functions['Request'] = (self._parse_request, self._reform_request)
 		self.functions['Cookie'] = (self._parse_cookies, self._reform_cookies)
 
+		if request == '':
+			return
+
 		# Take the header section of a message
 		unparsed_headers = self.extract_headers(request)
 		# Parse the header section
@@ -64,6 +67,8 @@ class Headers:
 		elif "Response" in header_types:
 			header_types.remove("Response")
 			output = [self.headers["Response"]['value']]
+		else:
+			output = ""
 
 		for header_type in header_types:
 			try:

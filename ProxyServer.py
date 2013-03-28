@@ -39,11 +39,20 @@ class ProxyServer:
 		client_socket, clientaddr = self.proxy_socket.accept()
 		# Take some data from the connection, so we can see who to proxy to.
 		request = client_socket.recv(buffer_size)
+		if request == "":
+			return
 
 		# Interpret the headers and pull out the host and port.
 		headers = Headers(request)
-		host = headers.headers['Request']['host'].split('/')[0]
-		port = headers.headers['Request']['port']
+		try:
+			host = headers.headers['Request']['host'].split('/')[0]
+			port = headers.headers['Request']['port']
+		except KeyError:
+			print ""
+			print "KeyError!"
+			print ""
+			print request
+			exit()
 
 		# Connect to the remote server we're proxying to.
 		connection = Connection(client_socket)
