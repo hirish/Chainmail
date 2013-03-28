@@ -40,7 +40,7 @@ class Headers:
 				elif unparsed_header[-8:-4].lower() == "http":
 					header_type, header_values = 'Request', unparsed_header.strip()
 				else:
-					raise Exception()
+					raise HeaderFormatError()
 			else:
 				# Usual headers follow form "type: value"
 				header_type, header_values = unparsed_header.split(':', 1)
@@ -72,4 +72,11 @@ class Headers:
 
 	def _parse_cookies(self, cookie_string):
 		return Cookies(cookie_string)
+
+
+class HeaderFormatError:
+	'''Headers class unable to parse given header data'''
+
+	def __str__(self):
+		return "Header incorrectly formatted"
 
