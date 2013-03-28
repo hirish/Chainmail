@@ -50,12 +50,19 @@ class ProxyServer:
 		# Success - register the sockets for listening, as well as
 		# the connection
 		if connection.connect_server(host, port):
-			print "Connection between %s and %s established" % (clientaddr, host)
+			print "Connection between %s and %s:%s established" % (clientaddr, host, str(port))
 			self.input_list.append(connection.client)
 			self.input_list.append(connection.server)
 			self.connections[connection.client] = connection
 			self.connections[connection.server] = connection
-			connection.send_data(client_socket, request)
+			if headers.headers['Request']['method'] == "CONNECT":
+				message = 'HTTP/1.1 200 Connection established\nProxy-agent: ChainMail/1.0\n\n'
+				print "<<<<<<<<<<<<<<"
+				print message
+				print "<<<<<<<<<<<<<<"
+				client_socket.send(message)
+			else:
+				connection.send_data(client_socket, request)
 		# Failure - close the client connection and display error message.
 		else:
 			print "Can't establish connection with server %s." % host
