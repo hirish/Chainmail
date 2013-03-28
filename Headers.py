@@ -2,13 +2,13 @@ from Cookies import Cookies
 
 class Headers:
 
-	# Eventually populated with the different header types from HTTP messages.
-	headers = {}
-
 	# Defines the functions to parse each different type of header.
 	functions = {}
 
 	def __init__(self, request):
+		# Eventually populated with the different header types from HTTP messages.
+		self.headers = {}
+
 		# Register parsing functions
 		self.functions['Request'] = (self._parse_request, self._reform_request)
 		self.functions['Cookie'] = (self._parse_cookies, self._reform_cookies)
@@ -55,7 +55,7 @@ class Headers:
 
 	def reform(self, header_types = None):
 		if header_types == None:
-			header_types = headers.keys()
+			header_types = self.headers.keys()
 
 		# Move request/response header to beginning.
 		if "Request" in header_types:
@@ -63,13 +63,13 @@ class Headers:
 			output = [self.functions['Request'][1]()]
 		elif "Response" in header_types:
 			header_types.remove("Response")
-			output = [self.functions['Response'][1]()]
+			output = [self.headers["Response"]['value']]
 
 		for header_type in header_types:
 			try:
 				output.append(self.functions[header_type][1]())
 			except KeyError:
-				output.append("%s: %s" % (header_type, headers[header_type][value]))
+				output.append("%s: %s" % (header_type, self.headers[header_type]['value']))
 		
 		return "\n".join(output)
 	
@@ -117,7 +117,7 @@ class Headers:
 		return Cookies(cookie_string)
 
 	def _reform_cookies(self):
-		return self.headers['Cookie'].reform()
+		return "Cookie: " + self.headers['Cookie'].reform()
 
 
 class HeaderFormatError:

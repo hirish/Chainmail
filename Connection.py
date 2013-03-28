@@ -1,10 +1,7 @@
 import socket
+from HTTP import HTTP_Message
 
 class Connection:
-
-	# Two computers involved in the connection.
-	client = None
-	server = None
 
 	def __init__(self, client):
 		self.client = client
@@ -22,9 +19,7 @@ class Connection:
 	def send_data(self, from_socket, raw_message_data):
 		'''Takes some data, and the socket it was sent from, then sends the
 		data to the opposite socket'''
-		print raw_message_data
-		print ''
-		message_data = HTTP_message(raw_message_data)
+		message_data = HTTP_Message(raw_message_data)
 		if from_socket == self.client:
 			self._send_to_server(message_data)
 		elif from_socket == self.server:
@@ -39,8 +34,7 @@ class Connection:
 	def _send_to_client(self, message_data):
 		'''Send data to the client (initator of connection).'''
 		headers = message_data.headers
-		if headers:
-			continue
+		#if headers:
 
 		# Send data.
 		self.client.send(message_data.reform())
@@ -51,8 +45,7 @@ class Connection:
 	def _send_to_server(self, message_data):
 		''' Send data to the server the client initated the connection to.'''
 		headers = message_data.headers
-		if headers:
-			continue
+		#if headers:
 
 		# Send data.
 		self.server.send(message_data.reform())
