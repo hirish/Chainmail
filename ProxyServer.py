@@ -42,7 +42,7 @@ class ProxyServer:
 
 		# Interpret the headers and pull out the host and port.
 		headers = Headers(request)
-		host = headers.headers['Request']['host'].strip('/')
+		host = headers.headers['Request']['host'].split('/')[0]
 		port = headers.headers['Request']['port']
 
 		# Connect to the remote server we're proxying to.
