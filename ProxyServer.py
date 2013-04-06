@@ -37,14 +37,14 @@ class ProxyServer:
 				except Exception:
 					print "Connection Error:"
 					connection = self.connections[socket]
+					print "\t%s" % connection
 					if socket == connection.client:
 						print "\t Reset by client."
 					elif socket == connection.server:
 						print "\t Reset by server."
 					else:
 						print "\t Broken."
-					print "\t%s" % connection
-					exit()
+					self.close(socket)
 				if len(self.data) == 0:
 					self.close(socket)
 				else:
