@@ -87,7 +87,7 @@ class ProxyServer:
 				self.register_connection(connection)
 			# Failure - close the client connection and display error message.
 			else:
-				connection_failure(connection, clientaddr, host)
+				self.connection_failure(connection, clientaddr, host)
 
 		# A HTTP connection.
 		else:
@@ -102,7 +102,7 @@ class ProxyServer:
 				connection.send_data(client_socket, request)
 			# Failure - close the client connection and display error message.
 			else:
-				connection_failure(connection, clientaddr, host)
+				self.connection_failure(connection, clientaddr, host)
 	
 	def register_connection(self, connection):
 		self.input_list.append(connection.client)

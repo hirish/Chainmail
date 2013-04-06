@@ -2,7 +2,7 @@ import socket
 import ssl
 from HTTP import HTTP_Message
 
-class HTTPConnection:
+class HTTPConnection(object):
 
 	def __init__(self, client):
 		self.client = client
@@ -43,7 +43,8 @@ class HTTPConnection:
 	def _send_to_client(self, message_data):
 		'''Send data to the client (initator of connection).'''
 		headers = message_data.headers
-		#if headers:
+		if headers:
+			message_data.decode()
 
 		# Send data.
 		self.client.send(message_data.reform())
@@ -74,4 +75,11 @@ class HTTPSConnection(HTTPConnection):
 
 	# Change the default port to connect to.
 	def connect_server(self, server_host, port = 443):
-		super(HTTPConnection, self).connect_server(server_host, port)
+		try:
+			# Connect the server to the specified host.
+			self.server.connect((server_host, port))
+			self.server_name = self.server.getpeername()
+			return True
+		except Exception as e:
+			print e
+			return False
