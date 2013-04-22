@@ -44,10 +44,13 @@ class HTTPConnection(object):
 		'''Send data to the client (initator of connection).'''
 		headers = message_data.headers
 		if headers:
-			message_data.decode()
+			message_data.decompress()
 
 		# Send data.
 		self.client.send(message_data.reform())
+		a = open('a', 'w')
+		a.write(message_data.reform())
+		a.close()
 		print "<<<<<<<<<<<<<<"
 		print message_data.reform()
 		print "<<<<<<<<<<<<<<"
@@ -55,6 +58,9 @@ class HTTPConnection(object):
 	def _send_to_server(self, message_data):
 		''' Send data to the server the client initated the connection to.'''
 		headers = message_data.headers
+
+		if "Accept-Encoding" in message_data.headers.headers:
+			message_data.headers.headers["Accept-Encoding"] = {'value': 'gzip'}
 		#if headers:
 
 		# Send data.

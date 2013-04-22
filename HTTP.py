@@ -21,9 +21,12 @@ class HTTP_Message:
 		#message = message.replace('\n', '\n\r')
 		return message
 
-	def decode(self):
-		if self.headers.headers["Content-Encoding"]['value'] == 'gzip':
-			d = "\r\n".join(self.data.split('\r\n')[1:-3])
-			print "==========="
-			print gzip.GzipFile('', 'rb', 9, StringIO.StringIO(d)).read()
-			print "==========="
+	def decompress(self):
+		try:
+			if self.headers.headers["Content-Encoding"]['value'] == 'gzip':
+				d = "\r\n".join(self.data.split('\r\n')[1:-3])
+				self.data = gzip.GzipFile('', 'rb', 9, StringIO.StringIO(d)).read()
+				del(self.headers.headers["Content-Encoding"])
+				del(self.headers.headers["Transfer-Encoding"])
+		except KeyError:
+			1 == 1

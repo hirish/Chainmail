@@ -69,6 +69,7 @@ class ProxyServer:
 
 		# CONNECT = a HTTPS connection.
 		if headers.headers['Request']['method'] == "CONNECT":
+			print ">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % request
 			print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % message
 			client_socket.send(message)
 			ssl_client_socket = ssl.wrap_socket(client_socket,

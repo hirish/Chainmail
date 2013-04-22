@@ -68,7 +68,7 @@ class Headers:
 			header_types.remove("Response")
 			output = [self.headers["Response"]['value']]
 		else:
-			output = ""
+			output = []
 
 		for header_type in header_types:
 			try:
