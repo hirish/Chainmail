@@ -9,9 +9,6 @@ KEYFILE = "../Certificates/Chainmail.key"
 CERTFILE = "../Certificates/Chainmail.crt"
 
 class ProxyServer:
-	input_list = []
-	channel = {}
-	connections = {}
 
 	def __init__(self, host, port):
 		self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,4 +70,3 @@ class ProxyServer:
 
 			client_listener.start()
 			server_listener.start()
-
