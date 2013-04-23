@@ -3,9 +3,7 @@ import ssl
 from Headers import Headers
 from Connection import ClientListener, ServerListener
 
-buffer_size = 8192
-delay = 0.0001
-
+BUFFER_SIZE = 8192
 CONNECT_RESPONSE = 'HTTP/1.1 200 Connection established\nProxy-agent: ChainMail/1.0\n\n'
 KEYFILE = "../Certificates/Chainmail.key"
 CERTFILE = "../Certificates/Chainmail.crt"
@@ -22,13 +20,13 @@ class ProxyServer:
 		self.proxy_socket.listen(200)
 		print "Listening on ", self.proxy_socket
 			
-	def main_loop(self):
+	def run(self):
 		while True:
 			# A connection has been attempted, accept it.
 			client_socket, client_address = self.proxy_socket.accept()
 
 			# Take some data from the connection, so we can see who to proxy to.
-			data = client_socket.recv(buffer_size)
+			data = client_socket.recv(BUFFER_SIZE)
 			if data == "":
 				print "Empty request"
 				continue
