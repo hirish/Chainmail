@@ -29,4 +29,5 @@ class HTTP_Message:
 				del(self.headers.headers["Content-Encoding"])
 				del(self.headers.headers["Transfer-Encoding"])
 		except KeyError:
-			1 == 1
+			# Not compressed.
+			pass
