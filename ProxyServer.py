@@ -1,6 +1,4 @@
 import socket
-import select
-import time
 import ssl
 from Headers import Headers
 from Connection import ClientListener, ServerListener

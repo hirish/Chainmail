@@ -1,5 +1,3 @@
-import socket
-import ssl
 import threading
 from HTTP import HTTP_Message
 
