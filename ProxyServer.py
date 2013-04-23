@@ -1,7 +1,7 @@
 import socket
 import ssl
 from Headers import Headers
-from Connection import ClientListener, ServerListener
+from Listeners import ClientListener, ServerListener
 
 BUFFER_SIZE = 8192
 CONNECT_RESPONSE = 'HTTP/1.1 200 Connection established\nProxy-agent: ChainMail/1.0\n\n'
