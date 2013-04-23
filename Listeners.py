@@ -1,7 +1,7 @@
 import threading
 from HTTP import HTTP_Message
 
-BUFFER_SIZE = 8192
+BUFFER_SIZE = 32768
 
 class Listener(threading.Thread):
 

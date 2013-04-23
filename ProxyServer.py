@@ -3,7 +3,7 @@ import ssl
 from Headers import Headers
 from Listeners import ClientListener, ServerListener
 
-BUFFER_SIZE = 8192
+BUFFER_SIZE = 32768
 CONNECT_RESPONSE = 'HTTP/1.1 200 Connection established\nProxy-agent: ChainMail/1.0\n\n'
 KEYFILE = "../Certificates/Chainmail.key"
 CERTFILE = "../Certificates/Chainmail.crt"
@@ -48,7 +48,11 @@ class ProxyServer:
 												certfile = CERTFILE,
 												server_side = True,
 												do_handshake_on_connect = False)
-				client_socket.do_handshake()
+				try:
+					client_socket.do_handshake()
+				except ssl.SSLError as error:
+					print "SSL Error", error
+					continue
 
 				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				server_socket = ssl.wrap_socket(server_socket)
