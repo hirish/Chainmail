@@ -44,7 +44,7 @@ class Headers:
 					header_type, header_values = 'Request', unparsed_header.strip()
 				else:
 					raise HeaderFormatError()
-			else:
+			elif len(unparsed_header) > 0:
 				# Usual headers follow form "type: value"
 				header_type, header_values = unparsed_header.split(':', 1)
 				header_values = header_values.strip()
