@@ -3,12 +3,14 @@ import select
 import time
 import ssl
 from Headers import Headers
-from Connection import HTTPConnection, HTTPSConnection
+from Connection import ClientListener, ServerListener
 
 buffer_size = 8192
 delay = 0.0001
 
-message = 'HTTP/1.1 200 Connection established\nProxy-agent: ChainMail/1.0\n\n'
+CONNECT_RESPONSE = 'HTTP/1.1 200 Connection established\nProxy-agent: ChainMail/1.0\n\n'
+KEYFILE = "../Certificates/Chainmail.key"
+CERTFILE = "../Certificates/Chainmail.crt"
 
 class ProxyServer:
 	input_list = []
@@ -21,114 +23,58 @@ class ProxyServer:
 		self.proxy_socket.bind((host, port))
 		self.proxy_socket.listen(200)
 		print "Listening on ", self.proxy_socket
-
+			
 	def main_loop(self):
-		self.input_list.append(self.proxy_socket)
 		while True:
-			time.sleep(delay)
-			inputready, _, _ = select.select(self.input_list, [], [])
-			for socket in inputready:
-				if socket == self.proxy_socket:
-					self.accept()
-					break
+			# A connection has been attempted, accept it.
+			client_socket, client_address = self.proxy_socket.accept()
 
-				try:
-					self.data = socket.recv(buffer_size)
-				except Exception:
-					print "Connection Error:"
-					connection = self.connections[socket]
-					print "\t%s" % connection
-					if socket == connection.client:
-						print "\t Reset by client."
-					elif socket == connection.server:
-						print "\t Reset by server."
-					else:
-						print "\t Broken."
-					self.close(socket)
-				if len(self.data) == 0:
-					self.close(socket)
-				else:
-					self.connections[socket].send_data(socket, self.data)
+			# Take some data from the connection, so we can see who to proxy to.
+			data = client_socket.recv(buffer_size)
+			if data == "":
+				print "Empty request"
+				continue
 
-	def accept(self):
-		# A connection has been attempted, accept it.
-		client_socket, clientaddr = self.proxy_socket.accept()
-		# Take some data from the connection, so we can see who to proxy to.
-		request = client_socket.recv(buffer_size)
-		if request == "":
-			return
+			# Interpret the headers and pull out the host and port.
+			headers = Headers(data)
+			try:
+				server_host = headers.headers['Request']['host'].split('/')[0]
+				server_port = headers.headers['Request']['port']
+				server_address = (server_host, server_port)
+			except KeyError:
+				print "Invalid request\n", data
+				continue
+			
+			if headers.headers['Request']['method'] == "CONNECT":
+				print ">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % data
+				print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % CONNECT_RESPONSE
+				client_socket.send(CONNECT_RESPONSE)
 
-		# Interpret the headers and pull out the host and port.
-		headers = Headers(request)
-		try:
-			host = headers.headers['Request']['host'].split('/')[0]
-			port = headers.headers['Request']['port']
-		except KeyError:
-			print "\nKeyError!\n", request
-			exit()
+				client_socket = ssl.wrap_socket(client_socket,
+												keyfile = KEYFILE,
+												certfile = CERTFILE,
+												server_side = True,
+												do_handshake_on_connect = False)
+				client_socket.do_handshake()
 
-		# CONNECT = a HTTPS connection.
-		if headers.headers['Request']['method'] == "CONNECT":
-			print ">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % request
-			print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % message
-			client_socket.send(message)
-			ssl_client_socket = ssl.wrap_socket(client_socket,
-											   keyfile = "../Certificates/Chainmail.key",
-											   certfile = "../Certificates/Chainmail.crt",
-											   server_side = True,
-											   do_handshake_on_connect = False)
-			ssl_client_socket.do_handshake()
-			# Connect to the remote server we're proxying to.
-			connection = HTTPSConnection(ssl_client_socket)
-			# Success - register the sockets for listening, as well as
-			# the connection
-			if connection.connect_server(host, port):
-				print "Secure connection between %s and %s:%s established\n" \
-					  % (clientaddr, host, str(port)), request
-				self.register_connection(connection)
-			# Failure - close the client connection and display error message.
+				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				server_socket = ssl.wrap_socket(server_socket)
+
+				data = ""
+
 			else:
-				self.connection_failure(connection, clientaddr, host)
+				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-		# A HTTP connection.
-		else:
-			# Connect to the remote server we're proxying to.
-			connection = HTTPConnection(client_socket)
-			# Success - register the sockets for listening, as well as
-			# the connection
-			if connection.connect_server(host, port):
-				print "Connection between %s and %s:%s established\n" \
-					  % (clientaddr, host, str(port)), request
-				self.register_connection(connection)
-				connection.send_data(client_socket, request)
-			# Failure - close the client connection and display error message.
-			else:
-				self.connection_failure(connection, clientaddr, host)
-	
-	def register_connection(self, connection):
-		self.input_list.append(connection.client)
-		self.input_list.append(connection.server)
-		self.connections[connection.client] = connection
-		self.connections[connection.server] = connection
+			server_socket.connect(server_address)
 
-	def connection_failure(self, connection, clientaddr, host):
-		print "Can't establish secure connection with server %s." % host
-		print "Closing connection with client %s." % str(clientaddr)
-		connection.client.close()
+			client_listener = ClientListener(client_socket, server_socket)
+			server_listener = ServerListener(client_socket, server_socket)
 
+			server_listener.setDaemon(True)
+			client_listener.setDaemon(True)
 
-	def close(self, socket):
-		print socket.getpeername(), "has disconnected"
-		connection = self.connections[socket]
+			client_listener.send(data)
 
-		# Stop checking sockets
-		self.input_list.remove(connection.client)
-		self.input_list.remove(connection.server)
+			client_listener.start()
+			server_listener.start()
 
-		# Close connections.
-		connection.client.close()
-		connection.server.close()
-
-		# Delete from connections dict.
-		del self.connections[connection.client]
-		del self.connections[connection.server]

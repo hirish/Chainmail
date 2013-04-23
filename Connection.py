@@ -1,91 +1,63 @@
 import socket
 import ssl
+import threading
 from HTTP import HTTP_Message
 
-class HTTPConnection(object):
+BUFFER_SIZE = 8192
 
-	def __init__(self, client):
-		self.client = client
-		self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+class Listener(threading.Thread):
 
-		self.client_name = client.getpeername()
-		self.server_name = "Server Unconnected"
-
-	def __str__(self):
-		return "<Connection between %s and %s>" % (self.client_name,
-												   self.server_name)
+	def run(self):
+		print "Starting", self.__class__.__name__
+		while (True):
+			data = self.listen_socket.recv(BUFFER_SIZE)	
+			if len(data) == 0:
+				break
+			self.send(data)
+		self.listen_socket.close()
+		self.output_socket.close()
 	
-	def connect_server(self, server_host, port = 80):
-		try:
-			# Connect the server to the specified host.
-			self.server.connect((server_host, port))
-			self.server_name = self.server.getpeername()
-			return True
-		except Exception as e:
-			print e
-			return False
+	def send(self, data):
+		message = HTTP_Message(data)
+		self.alter(message)
+		self.output_socket.send(message.reform())
+		self.print_send(message.reform())
 
-	def send_data(self, from_socket, raw_message_data):
-		'''Takes some data, and the socket it was sent from, then sends the
-		data to the opposite socket'''
-		message_data = HTTP_Message(raw_message_data)
-		if from_socket == self.client:
-			self._send_to_server(message_data)
-		elif from_socket == self.server:
-			self._send_to_client(message_data)
-		else:
-			# If it's not from a socket we know, then ProxyServer is broken.
-			print "!!!!!!!!!!!!!!"
-			print message_data.reform()
-			print "!!!!!!!!!!!!!!"
-			exit()
+	def __init__(self, client_socket, server_socket):
+		raise NotImplementedError("Use a subclass of Listener")
 
-	def _send_to_client(self, message_data):
-		'''Send data to the client (initator of connection).'''
-		headers = message_data.headers
-		if headers:
-			message_data.decompress()
+	def print_send(self, data):
+		raise NotImplementedError("Listener.print_send not implemented")
 
-		# Send data.
-		self.client.send(message_data.reform())
-		a = open('a', 'w')
-		a.write(message_data.reform())
-		a.close()
-		print "<<<<<<<<<<<<<<"
-		print message_data.reform()
-		print "<<<<<<<<<<<<<<"
-	
-	def _send_to_server(self, message_data):
-		''' Send data to the server the client initated the connection to.'''
-		headers = message_data.headers
+	def alter(self, message):
+		raise NotImplementedError("Listener.alter not implemented")
 
-		if "Accept-Encoding" in message_data.headers.headers:
-			message_data.headers.headers["Accept-Encoding"] = {'value': 'gzip'}
-		#if headers:
+class ClientListener(Listener):
 
-		# Send data.
-		self.server.send(message_data.reform())
-		print ">>>>>>>>>>>>>>"
-		print message_data.reform()
-		print ">>>>>>>>>>>>>>"
+	def __init__(self, client_socket, server_socket):
+		threading.Thread.__init__(self)
+		self.listen_socket = client_socket
+		self.output_socket = server_socket
 
-class HTTPSConnection(HTTPConnection):
+	def print_send(self, data):
+		print ">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % data
 
-	def __init__(self, client):
-		self.client = client
-		unwrapped_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.server = ssl.wrap_socket(unwrapped_socket)
+	def alter(self, message):
+		headers = message.headers.headers
 
-		self.client_name = client.getpeername()
-		self.server_name = "Server Unconnected"
+		if "Accept-Encoding" in headers:
+			headers["Accept-Encoding"] = {'value': 'identity'}
 
-	# Change the default port to connect to.
-	def connect_server(self, server_host, port = 443):
-		try:
-			# Connect the server to the specified host.
-			self.server.connect((server_host, port))
-			self.server_name = self.server.getpeername()
-			return True
-		except Exception as e:
-			print e
-			return False
+
+class ServerListener(Listener):
+
+	def __init__(self, client_socket, server_socket):
+		threading.Thread.__init__(self)
+		self.listen_socket = server_socket
+		self.output_socket = client_socket
+
+	def print_send(self, data):
+		print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % data
+
+	def alter(self, message):
+		return True
