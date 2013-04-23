@@ -46,7 +46,7 @@ class ClientListener(Listener):
 		headers = message.headers.headers
 
 		if "Accept-Encoding" in headers:
-			headers["Accept-Encoding"] = {'value': 'identity'}
+			headers["Accept-Encoding"] = {'value': 'gzip'}
 
 
 class ServerListener(Listener):
@@ -60,4 +60,4 @@ class ServerListener(Listener):
 		print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % data
 
 	def alter(self, message):
-		return True
+		message.decompress()
