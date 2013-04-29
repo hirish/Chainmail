@@ -1,4 +1,6 @@
+import ssl
 import threading
+import select
 from HTTP import HTTP_Message
 
 BUFFER_SIZE = 32768
@@ -7,13 +9,31 @@ class Listener(threading.Thread):
 
 	def run(self):
 		print "Starting", self.__class__.__name__
-		while (True):
-			data = self.listen_socket.recv(BUFFER_SIZE)	
-			if len(data) == 0:
+		self.listen_socket.setblocking(0)
+		count = 0
+		while not self.stop:
+			if count > 20:
 				break
-			self.send(data)
+
+			try:
+				ready = select.select([self.listen_socket], [], [], 0.1)
+			except:
+				break
+
+			if ready[0]:
+				count = 0
+
+				try:
+					data = self.listen_socket.recv(BUFFER_SIZE)	
+				except ssl.SSLError:
+					break
+
+				if len(data) == 0:
+					break
+				self.send(data)
+			else:
+				count += 1
 		self.listen_socket.close()
-		self.output_socket.close()
 	
 	def send(self, data):
 		message = HTTP_Message(data)
@@ -36,6 +56,7 @@ class ClientListener(Listener):
 		threading.Thread.__init__(self)
 		self.listen_socket = client_socket
 		self.output_socket = server_socket
+		self.stop = False
 
 	def print_send(self, data):
 		print ">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % data
@@ -53,6 +74,7 @@ class ServerListener(Listener):
 		threading.Thread.__init__(self)
 		self.listen_socket = server_socket
 		self.output_socket = client_socket
+		self.stop = False
 
 	def print_send(self, data):
 		print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % data

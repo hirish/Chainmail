@@ -50,14 +50,14 @@ class ProxyServer:
 												do_handshake_on_connect = False)
 				try:
 					client_socket.do_handshake()
-				except ssl.SSLError as error:
+				except (ssl.SSLError, socket.error) as error:
 					print "SSL Error", error
 					continue
 
 				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				server_socket = ssl.wrap_socket(server_socket)
 
-				data = ""
+				data = None
 
 			else:
 				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -70,7 +70,8 @@ class ProxyServer:
 			server_listener.setDaemon(True)
 			client_listener.setDaemon(True)
 
-			client_listener.send(data)
+			if data:
+				client_listener.send(data)
 
 			client_listener.start()
 			server_listener.start()
