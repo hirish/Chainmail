@@ -1,5 +1,6 @@
 import socket
 import ssl
+import Logger
 from Headers import Headers
 from Listeners import ClientListener, ServerListener
 
@@ -15,7 +16,7 @@ class ProxyServer:
 		self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.proxy_socket.bind((host, port))
 		self.proxy_socket.listen(200)
-		print "Listening on ", self.proxy_socket
+		Logger.i("Listening on ", self.proxy_socket)
 			
 	def run(self):
 		while True:
@@ -25,7 +26,7 @@ class ProxyServer:
 			# Take some data from the connection, so we can see who to proxy to.
 			data = client_socket.recv(BUFFER_SIZE)
 			if data == "":
-				print "Empty request"
+				Logger.e("Empty request")
 				continue
 
 			# Interpret the headers and pull out the host and port.
@@ -35,12 +36,12 @@ class ProxyServer:
 				server_port = headers.headers['Request']['port']
 				server_address = (server_host, server_port)
 			except KeyError:
-				print "Invalid request\n", data
+				Logger.e("Invalid request\n", data)
 				continue
 			
 			if headers.headers['Request']['method'] == "CONNECT":
-				print "==============\n%s\n==============" % data
-				print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % CONNECT_RESPONSE
+				Logger.v("==============\n%s\n==============" % data)
+				Logger.v("<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % CONNECT_RESPONSE)
 				client_socket.send(CONNECT_RESPONSE)
 
 				client_socket = ssl.wrap_socket(client_socket,
@@ -51,7 +52,7 @@ class ProxyServer:
 				try:
 					client_socket.do_handshake()
 				except (ssl.SSLError, socket.error) as error:
-					print "SSL Error", error
+					Logger.e("SSL Error", error)
 					continue
 
 				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

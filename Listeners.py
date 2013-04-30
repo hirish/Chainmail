@@ -1,6 +1,7 @@
 import ssl
 import threading
 import select
+import Logger
 from HTTP import HTTP_Message
 
 BUFFER_SIZE = 32768
@@ -8,18 +9,18 @@ BUFFER_SIZE = 32768
 class Listener(threading.Thread):
 
 	def run(self):
-		print "Starting", self.__class__.__name__
+		Logger.e("Starting", self.__class__.__name__)
 		self.listen_socket.setblocking(0)
 		count = 0
 		while not self.stop:
 			if count > 20:
-				print self.__class__.__name__, ": Socket timeout."
+				Logger.e(self.__class__.__name__, ": Socket timeout.")
 				break
 
 			try:
 				ready = select.select([self.listen_socket], [], [], 0.1)
 			except:
-				print self.__class__.__name__, ": Select failed."
+				Logger.e(self.__class__.__name__, ": Select failed.")
 				break
 
 			if ready[0]:
@@ -28,7 +29,7 @@ class Listener(threading.Thread):
 				try:
 					data = self.listen_socket.recv(BUFFER_SIZE)	
 				except ssl.SSLError:
-					print self.__class__.__name__, ": SSL Error."
+					Logger.e(self.__class__.__name__, ": SSL Error.")
 					break
 
 				if len(data) == 0:
@@ -36,7 +37,7 @@ class Listener(threading.Thread):
 				self.send(data)
 			else:
 				count += 1
-		print "Quitting", self.__class__.__name__
+		Logger.i("Quitting", self.__class__.__name__)
 		self.stop = True
 		self.listen_socket.close()
 		if self.paired_listener:
@@ -70,7 +71,7 @@ class ClientListener(Listener):
 		self.stop = False
 
 	def print_send(self, data):
-		print ">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % data
+		Logger.v(">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % data)
 
 	def alter(self, message):
 		headers = message.headers.headers
@@ -89,7 +90,7 @@ class ServerListener(Listener):
 		self.stop = False
 
 	def print_send(self, data):
-		print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % data
+		Logger.v("<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % data)
 
 	def alter(self, message):
 		message.decompress()
