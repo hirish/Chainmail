@@ -67,6 +67,9 @@ class ProxyServer:
 			client_listener = ClientListener(client_socket, server_socket)
 			server_listener = ServerListener(client_socket, server_socket)
 
+			client_listener.set_paired_listener(server_listener)
+			server_listener.set_paired_listener(client_listener)
+
 			server_listener.setDaemon(True)
 			client_listener.setDaemon(True)
 

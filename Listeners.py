@@ -33,13 +33,19 @@ class Listener(threading.Thread):
 				self.send(data)
 			else:
 				count += 1
+		self.stop = True
 		self.listen_socket.close()
+		if paired_listener:
+			paired_listener.stop = True
 	
 	def send(self, data):
 		message = HTTP_Message(data)
 		self.alter(message)
 		self.output_socket.send(message.reform())
 		self.print_send(message.reform())
+	
+	def set_paired_listener(self, paired_listener):
+		self.paired_listener = paired_listener
 
 	def __init__(self, client_socket, server_socket):
 		raise NotImplementedError("Use a subclass of Listener")
@@ -56,6 +62,7 @@ class ClientListener(Listener):
 		threading.Thread.__init__(self)
 		self.listen_socket = client_socket
 		self.output_socket = server_socket
+		self.paired_listener = None
 		self.stop = False
 
 	def print_send(self, data):
@@ -74,6 +81,7 @@ class ServerListener(Listener):
 		threading.Thread.__init__(self)
 		self.listen_socket = server_socket
 		self.output_socket = client_socket
+		self.paired_listener = None
 		self.stop = False
 
 	def print_send(self, data):
