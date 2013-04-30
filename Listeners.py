@@ -36,6 +36,7 @@ class Listener(threading.Thread):
 				self.send(data)
 			else:
 				count += 1
+		print "Quitting", self.__class__.__name__
 		self.stop = True
 		self.listen_socket.close()
 		if self.paired_listener:
