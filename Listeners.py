@@ -13,11 +13,13 @@ class Listener(threading.Thread):
 		count = 0
 		while not self.stop:
 			if count > 20:
+				print self.__class__.__name__, ": Socket timeout."
 				break
 
 			try:
 				ready = select.select([self.listen_socket], [], [], 0.1)
 			except:
+				print self.__class__.__name__, ": Select failed."
 				break
 
 			if ready[0]:
@@ -26,6 +28,7 @@ class Listener(threading.Thread):
 				try:
 					data = self.listen_socket.recv(BUFFER_SIZE)	
 				except ssl.SSLError:
+					print self.__class__.__name__, ": SSL Error."
 					break
 
 				if len(data) == 0:
@@ -35,8 +38,8 @@ class Listener(threading.Thread):
 				count += 1
 		self.stop = True
 		self.listen_socket.close()
-		if paired_listener:
-			paired_listener.stop = True
+		if self.paired_listener:
+			self.paired_listener.stop = True
 	
 	def send(self, data):
 		message = HTTP_Message(data)

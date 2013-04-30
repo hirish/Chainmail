@@ -39,7 +39,7 @@ class ProxyServer:
 				continue
 			
 			if headers.headers['Request']['method'] == "CONNECT":
-				print ">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % data
+				print "==============\n%s\n==============" % data
 				print "<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % CONNECT_RESPONSE
 				client_socket.send(CONNECT_RESPONSE)
 
