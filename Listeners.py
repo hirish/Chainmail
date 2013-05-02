@@ -1,6 +1,7 @@
 import ssl
 import threading
 import select
+import time
 import Logger
 from HTTP import HTTP_Message
 
@@ -17,26 +18,25 @@ class Listener(threading.Thread):
 				Logger.e(self.__class__.__name__, ": Socket timeout.")
 				break
 
-			try:
-				ready = select.select([self.listen_socket], [], [], 0.1)
-			except:
-				Logger.e(self.__class__.__name__, ": Select failed.")
-				break
+			ready = select.select([self.listen_socket], [], [], 0.1)
 
-			if ready[0]:
-				count = 0
-
-				try:
-					data = self.listen_socket.recv(BUFFER_SIZE)	
-				except ssl.SSLError:
-					Logger.e(self.__class__.__name__, ": SSL Error.")
-					break
-
-				if len(data) == 0:
-					break
-				self.send(data)
-			else:
+			if not ready[0]:
 				count += 1
+				continue
+
+			count = 0
+			data = ""
+			try:
+				while ready[0]:
+					data += self.listen_socket.recv(BUFFER_SIZE)	
+					ready = select.select([self.listen_socket], [], [], 0.1)
+			except ssl.SSLError as e:
+				Logger.e(self.__class__.__name__, ": SSL Error." + str(e))
+
+			if len(data) == 0:
+				break
+			self.send(data)
+
 		Logger.i("Quitting", self.__class__.__name__)
 		self.stop = True
 		self.listen_socket.close()
@@ -46,7 +46,7 @@ class Listener(threading.Thread):
 	def send(self, data):
 		message = HTTP_Message(data)
 		self.alter(message)
-		self.output_socket.send(message.reform())
+		self.output_socket.sendall(message.reform())
 		self.print_send(message.reform())
 	
 	def set_paired_listener(self, paired_listener):
@@ -77,7 +77,7 @@ class ClientListener(Listener):
 		headers = message.headers.headers
 
 		if "Accept-Encoding" in headers:
-			headers["Accept-Encoding"] = {'value': 'gzip'}
+			headers["Accept-Encoding"] = {'value': 'identity'}
 
 
 class ServerListener(Listener):
