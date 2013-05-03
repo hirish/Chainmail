@@ -1,4 +1,4 @@
-from Cookies import Cookies
+import Cookies
 
 class Headers:
 
@@ -12,6 +12,7 @@ class Headers:
 		# Register parsing functions
 		self.functions['Request'] = (self._parse_request, self._reform_request)
 		self.functions['Cookie'] = (self._parse_cookies, self._reform_cookies)
+		self.functions['Set-Cookie'] = (self._parse_set_cookie, self._reform_set_cookie)
 
 		if request == '':
 			return
@@ -77,6 +78,18 @@ class Headers:
 				output.append("%s: %s" % (header_type, self.headers[header_type]['value']))
 		
 		return "\n".join(output)
+
+	def encrypt_data(self):
+		try:
+			self.set_cookies = Cookies.encrypt_set_cookies(self.set_cookies)
+		except:
+			pass
+	
+	def decrypt_data(self):
+		try:
+			self.cookies = Cookies.decrypt_cookies(self.cookies)
+		except:
+			pass
 	
 	def _parse_request(self, values):
 		# Requests are of the form 'method url httpversion'
@@ -117,12 +130,43 @@ class Headers:
 			return "%s %s:%s %s" % (method, host, str(port), http_version)
 		else:
 			return "%s %s %s" % (method, host, http_version)
+	
+	def _parse_set_cookie(self, new_cookie_string):
+		try:
+			self.set_cookies
+		except:
+			self.set_cookies = []
+
+		self.set_cookies.append(Cookies.extract_set_cookie(new_cookie_string))
+
+		return self.set_cookies
+
+	def _reform_set_cookie(self):
+		to_return = []
+		for set_cookie in self.set_cookies:
+			key, value, metacookie = set_cookie
+			if not metacookie == "":
+				to_return.append("Set-Cookie: %s=\"%s\";%s" % set_cookie)
+			else:
+				to_return.append("Set-Cookie: %s=\"%s\"" % key, value)
+		return "\n".join(to_return)
 
 	def _parse_cookies(self, cookie_string):
-		return Cookies(cookie_string)
+		try:
+			self.cookies
+		except:
+			self.cookies = {}
+
+		unparsed_cookies = cookie_string.split(";")
+		for unparsed_cookie in unparsed_cookies:
+				key, value = Cookies.extract_cookie_value(unparsed_cookie)
+				self.cookies[key] = value
+
+		return self.cookies
 
 	def _reform_cookies(self):
-		return "Cookie: " + self.headers['Cookie'].reform()
+		combined = ["%s=\"%s\"" % (k, v) for k, v in self.cookies.iteritems()]
+		return "Cookie: " + "; ".join(combined) + ";"
 
 
 class HeaderFormatError:

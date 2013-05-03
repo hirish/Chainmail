@@ -74,6 +74,8 @@ class ClientListener(Listener):
 		Logger.v(">>>>>>>>>>>>>>\n%s\n>>>>>>>>>>>>>>" % data)
 
 	def alter(self, message):
+		message.headers.decrypt_data()
+
 		headers = message.headers.headers
 
 		if "Accept-Encoding" in headers:
@@ -93,4 +95,5 @@ class ServerListener(Listener):
 		Logger.v("<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % data)
 
 	def alter(self, message):
+		message.headers.encrypt_data()
 		message.decompress()
