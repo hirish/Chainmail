@@ -5,77 +5,82 @@ from Headers import Headers
 from Listeners import ClientListener, ServerListener
 
 BUFFER_SIZE = 32768
-CONNECT_RESPONSE = 'HTTP/1.1 200 Connection established\nProxy-agent: ChainMail/1.0\n\n'
+CONNECT_RESPONSE = 'HTTP/1.1 200 Connection established\n' + \
+                   'Proxy-agent: ChainMail/1.0\n\n'
 KEYFILE = "../Certificates/Chainmail.key"
 CERTFILE = "../Certificates/Chainmail.crt"
 
+
 class ProxyServer:
 
-	def __init__(self, host, port):
-		self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.proxy_socket.bind((host, port))
-		self.proxy_socket.listen(200)
-		Logger.i("Listening on ", self.proxy_socket)
-			
-	def run(self):
-		while True:
-			# A connection has been attempted, accept it.
-			client_socket, client_address = self.proxy_socket.accept()
+    def __init__(self, host, port):
+        self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.proxy_socket.bind((host, port))
+        self.proxy_socket.listen(200)
+        Logger.i("Listening on ", self.proxy_socket)
 
-			# Take some data from the connection, so we can see who to proxy to.
-			data = client_socket.recv(BUFFER_SIZE)
-			if data == "":
-				Logger.e("Empty request")
-				continue
+    def run(self):
+        while True:
+            # A connection has been attempted, accept it.
+            client_socket, client_address = self.proxy_socket.accept()
 
-			# Interpret the headers and pull out the host and port.
-			headers = Headers(data)
-			try:
-				server_host = headers.headers['Request']['host'].split('/')[0]
-				server_port = headers.headers['Request']['port']
-				server_address = (server_host, server_port)
-			except KeyError:
-				Logger.e("Invalid request\n", data)
-				continue
-			
-			if headers.headers['Request']['method'] == "CONNECT":
-				Logger.v("==============\n%s\n==============" % data)
-				Logger.v("<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % CONNECT_RESPONSE)
-				client_socket.send(CONNECT_RESPONSE)
+            # Take some data from the connection, so we can see who to proxy to
+            data = client_socket.recv(BUFFER_SIZE)
+            if data == "":
+                Logger.e("Empty request")
+                continue
 
-				client_socket = ssl.wrap_socket(client_socket,
-												keyfile = KEYFILE,
-												certfile = CERTFILE,
-												server_side = True,
-												do_handshake_on_connect = False)
-				try:
-					client_socket.do_handshake()
-				except (ssl.SSLError, socket.error) as error:
-					Logger.e("SSL Error", error)
-					continue
+            # Interpret the headers and pull out the host and port.
+            headers = Headers(data)
+            try:
+                server_host = headers.headers['Request']['host'].split('/')[0]
+                server_port = headers.headers['Request']['port']
+                server_address = (server_host, server_port)
+            except KeyError:
+                Logger.e("Invalid request\n", data)
+                continue
 
-				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				server_socket = ssl.wrap_socket(server_socket)
+            if headers.headers['Request']['method'] == "CONNECT":
+                Logger.v("==============\n%s\n==============" % data)
+                Logger.v("<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<"
+                         % CONNECT_RESPONSE)
+                client_socket.send(CONNECT_RESPONSE)
 
-				data = None
+                client_socket = ssl.wrap_socket(client_socket,
+                                                keyfile=KEYFILE,
+                                                certfile=CERTFILE,
+                                                server_side=True,
+                                                do_handshake_on_connect=False)
+                try:
+                    client_socket.do_handshake()
+                except (ssl.SSLError, socket.error) as error:
+                    Logger.e("SSL Error", error)
+                    continue
 
-			else:
-				server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                server_socket = socket.socket(socket.AF_INET,
+                                              socket.SOCK_STREAM)
+                server_socket = ssl.wrap_socket(server_socket)
 
-			server_socket.connect(server_address)
+                data = None
 
-			client_listener = ClientListener(client_socket, server_socket)
-			server_listener = ServerListener(client_socket, server_socket)
+            else:
+                server_socket = socket.socket(socket.AF_INET,
+                                              socket.SOCK_STREAM)
 
-			client_listener.set_paired_listener(server_listener)
-			server_listener.set_paired_listener(client_listener)
+            server_socket.connect(server_address)
 
-			server_listener.setDaemon(True)
-			client_listener.setDaemon(True)
+            client_listener = ClientListener(client_socket, server_socket)
+            server_listener = ServerListener(client_socket, server_socket)
 
-			if data:
-				client_listener.send(data)
+            client_listener.set_paired_listener(server_listener)
+            server_listener.set_paired_listener(client_listener)
 
-			client_listener.start()
-			server_listener.start()
+            server_listener.setDaemon(True)
+            client_listener.setDaemon(True)
+
+            if data:
+                client_listener.send(data)
+
+            client_listener.start()
+            server_listener.start()

@@ -1,177 +1,180 @@
 import Cookies
 
+
 class Headers:
 
-	# Defines the functions to parse each different type of header.
-	functions = {}
+    # Defines the functions to parse each different type of header.
+    functions = {}
 
-	def __init__(self, request):
-		# Eventually populated with the different header types from HTTP messages.
-		self.headers = {}
+    def __init__(self, request):
+        # Eventually populated with the different header types.
+        self.headers = {}
 
-		# Register parsing functions
-		self.functions['Request'] = (self._parse_request, self._reform_request)
-		self.functions['Cookie'] = (self._parse_cookies, self._reform_cookies)
-		self.functions['Set-Cookie'] = (self._parse_set_cookie, self._reform_set_cookie)
+        # Register parsing functions
+        self.functions['Request'] = (self._parse_request, self._reform_request)
+        self.functions['Cookie'] = (self._parse_cookies, self._reform_cookies)
+        self.functions['Set-Cookie'] = (self._parse_set_cookie,
+                                        self._reform_set_cookie)
 
-		if request == '':
-			return
+        if request == '':
+            return
 
-		# Take the header section of a message
-		unparsed_headers = self.extract_headers(request)
-		# Parse the header section
-		self.parse_headers(unparsed_headers)
-	
-	def extract_headers(self, request):
-		# Messages often have two types of newline characters. Strip one.
-		request = request.replace('\r', '')
-		# Header section finishes with a double newline.
-		header_section = request.split('\n\n')[0]
-		# Each header type is on a different line.
-		unparsed_headers = header_section.split('\n')
-		return unparsed_headers
-	
-	def parse_headers(self, unparsed_headers):
-		first = True
-		for unparsed_header in unparsed_headers:
-			# First line is special, and doesn't follow usual header format.
-			if first:
-				first = False
-				# A server response is preceeded with HTTP/1.1 usually.
-				if unparsed_header[:4].lower() == "http":
-					header_type, header_values = 'Response', unparsed_header.strip()
-				# A request is preceeded by one of GET, POST, HEAD etc.
-				elif unparsed_header[-8:-4].lower() == "http":
-					header_type, header_values = 'Request', unparsed_header.strip()
-				else:
-					raise HeaderFormatError()
-			elif len(unparsed_header) > 0:
-				# Usual headers follow form "type: value"
-				header_type, header_values = unparsed_header.split(':', 1)
-				header_values = header_values.strip()
+        # Take the header section of a message
+        unparsed_headers = self.extract_headers(request)
+        # Parse the header section
+        self.parse_headers(unparsed_headers)
 
-			# Call a parsing function, if it exists.
-			if header_type in self.functions:
-				self.headers[header_type] = self.functions[header_type][0](header_values)
-			# Otherwise just a raw dump.
-			else:
-				self.headers[header_type] = {"value": header_values}
+    def extract_headers(self, request):
+        # Messages often have two types of newline characters. Strip one.
+        request = request.replace('\r', '')
+        # Header section finishes with a double newline.
+        header_section = request.split('\n\n')[0]
+        # Each header type is on a different line.
+        unparsed_headers = header_section.split('\n')
+        return unparsed_headers
 
-	def reform(self, header_types = None):
-		if header_types == None:
-			header_types = self.headers.keys()
+    def parse_headers(self, unparsed_headers):
+        first = True
+        for unparsed_header in unparsed_headers:
+            # First line is special, and doesn't follow usual header format.
+            if first:
+                first = False
+                # A server response is preceeded with HTTP/1.1 usually.
+                if unparsed_header[:4].lower() == "http":
+                    header_type = 'Response'
+                    header_values = unparsed_header.strip()
+                # A request is preceeded by one of GET, POST, HEAD etc.
+                elif unparsed_header[-8:-4].lower() == "http":
+                    header_type = 'Request'
+                    header_values = unparsed_header.strip()
+                else:
+                    raise HeaderFormatError()
+            elif len(unparsed_header) > 0:
+                # Usual headers follow form "type: value"
+                header_type, header_values = unparsed_header.split(':', 1)
+                header_values = header_values.strip()
 
-		# Move request/response header to beginning.
-		if "Request" in header_types:
-			header_types.remove("Request")
-			output = [self.functions['Request'][1]()]
-		elif "Response" in header_types:
-			header_types.remove("Response")
-			output = [self.headers["Response"]['value']]
-		else:
-			output = []
+            # Call a parsing function, if it exists.
+            if header_type in self.functions:
+                function = self.functions[header_type][0]
+                self.headers[header_type] = function(header_values)
+            # Otherwise just a raw dump.
+            else:
+                self.headers[header_type] = {"value": header_values}
 
-		for header_type in header_types:
-			try:
-				output.append(self.functions[header_type][1]())
-			except KeyError:
-				output.append("%s: %s" % (header_type, self.headers[header_type]['value']))
-		
-		return "\n".join(output)
+    def reform(self, header_types=None):
+        if header_types is None:
+            header_types = self.headers.keys()
 
-	def encrypt_data(self):
-		try:
-			self.set_cookies = Cookies.encrypt_set_cookies(self.set_cookies)
-		except:
-			pass
-	
-	def decrypt_data(self):
-		try:
-			self.cookies = Cookies.decrypt_cookies(self.cookies)
-		except:
-			pass
-	
-	def _parse_request(self, values):
-		# Requests are of the form 'method url httpversion'
-		# e.g. "GET google.co.uk HTTP/1.1"
-		try:
-			method, url, http_version = values.split()
-		except ValueError:
-			print values
-			exit()
-		
-		http_in_url = "http://" in url
-		url = url.replace('http://','')
-		try:
-			host, port = url.split(':', 1)
-			port = int(port)
-		except:
-			host, port = url, 80
+        # Move request/response header to beginning.
+        if "Request" in header_types:
+            header_types.remove("Request")
+            output = [self.functions['Request'][1]()]
+        elif "Response" in header_types:
+            header_types.remove("Response")
+            output = [self.headers["Response"]['value']]
+        else:
+            output = []
 
-		return  {
-					'method': method,
-					'host': host,
-					'port': port,
-					'http_version': http_version,
-					'http_in_url': http_in_url
-				}
+        for header_type in header_types:
+            try:
+                output.append(self.functions[header_type][1]())
+            except KeyError:
+                output.append("%s: %s" % (header_type,
+                                          self.headers[header_type]['value']))
 
-	def _reform_request(self):
-		method = self.headers['Request']['method']
-		host = self.headers['Request']['host']
-		port = self.headers['Request']['port']
-		http_version = self.headers['Request']['http_version']
-		http_in_url = self.headers['Request']['http_in_url']
+        return "\n".join(output)
 
-		if http_in_url:
-			host = "http://" + host
+    def encrypt_data(self):
+        try:
+            self.set_cookies = Cookies.encrypt_set_cookies(self.set_cookies)
+        except:
+            pass
 
-		if not port == 80:
-			return "%s %s:%s %s" % (method, host, str(port), http_version)
-		else:
-			return "%s %s %s" % (method, host, http_version)
-	
-	def _parse_set_cookie(self, new_cookie_string):
-		try:
-			self.set_cookies
-		except:
-			self.set_cookies = []
+    def decrypt_data(self):
+        try:
+            self.cookies = Cookies.decrypt_cookies(self.cookies)
+        except:
+            pass
 
-		self.set_cookies.append(Cookies.extract_set_cookie(new_cookie_string))
+    def _parse_request(self, values):
+        # Requests are of the form 'method url httpversion'
+        # e.g. "GET google.co.uk HTTP/1.1"
+        try:
+            method, url, http_version = values.split()
+        except ValueError:
+            print values
+            exit()
 
-		return self.set_cookies
+        http_in_url = "http://" in url
+        url = url.replace('http://', '')
+        try:
+            host, port = url.split(':', 1)
+            port = int(port)
+        except:
+            host, port = url, 80
 
-	def _reform_set_cookie(self):
-		to_return = []
-		for set_cookie in self.set_cookies:
-			key, value, metacookie = set_cookie
-			if not metacookie == "":
-				to_return.append("Set-Cookie: %s=\"%s\";%s" % set_cookie)
-			else:
-				to_return.append("Set-Cookie: %s=\"%s\"" % key, value)
-		return "\n".join(to_return)
+        return {'method': method,
+                'host': host,
+                'port': port,
+                'http_version': http_version,
+                'http_in_url': http_in_url}
 
-	def _parse_cookies(self, cookie_string):
-		try:
-			self.cookies
-		except:
-			self.cookies = {}
+    def _reform_request(self):
+        method = self.headers['Request']['method']
+        host = self.headers['Request']['host']
+        port = self.headers['Request']['port']
+        http_version = self.headers['Request']['http_version']
+        http_in_url = self.headers['Request']['http_in_url']
 
-		unparsed_cookies = cookie_string.split(";")
-		for unparsed_cookie in unparsed_cookies:
-				key, value = Cookies.extract_cookie_value(unparsed_cookie)
-				self.cookies[key] = value
+        if http_in_url:
+            host = "http://" + host
 
-		return self.cookies
+        if not port == 80:
+            return "%s %s:%s %s" % (method, host, str(port), http_version)
+        else:
+            return "%s %s %s" % (method, host, http_version)
 
-	def _reform_cookies(self):
-		combined = ["%s=\"%s\"" % (k, v) for k, v in self.cookies.iteritems()]
-		return "Cookie: " + "; ".join(combined) + ";"
+    def _parse_set_cookie(self, new_cookie_string):
+        try:
+            self.set_cookies
+        except:
+            self.set_cookies = []
+
+        self.set_cookies.append(Cookies.extract_set_cookie(new_cookie_string))
+
+        return self.set_cookies
+
+    def _reform_set_cookie(self):
+        to_return = []
+        for set_cookie in self.set_cookies:
+            key, value, metacookie = set_cookie
+            if not metacookie == "":
+                to_return.append("Set-Cookie: %s=\"%s\";%s" % set_cookie)
+            else:
+                to_return.append("Set-Cookie: %s=\"%s\"" % key, value)
+        return "\n".join(to_return)
+
+    def _parse_cookies(self, cookie_string):
+        try:
+            self.cookies
+        except:
+            self.cookies = {}
+
+        unparsed_cookies = cookie_string.split(";")
+        for unparsed_cookie in unparsed_cookies:
+                key, value = Cookies.extract_cookie_value(unparsed_cookie)
+                self.cookies[key] = value
+
+        return self.cookies
+
+    def _reform_cookies(self):
+        combined = ["%s=\"%s\"" % (k, v) for k, v in self.cookies.iteritems()]
+        return "Cookie: " + "; ".join(combined) + ";"
 
 
 class HeaderFormatError:
-	'''Headers class unable to parse given header data'''
+    '''Headers class unable to parse given header data'''
 
-	def __str__(self):
-		return "Header incorrectly formatted"
-
+    def __str__(self):
+        return "Header incorrectly formatted"
