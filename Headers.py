@@ -5,13 +5,17 @@ class Headers:
 
     # Defines the functions to parse each different type of header.
     functions = {}
+    new_line = "\r\n"
 
     def __init__(self, request):
         # Eventually populated with the different header types.
         self.headers = {}
+        self.header_types = []
 
         # Register parsing functions
         self.functions['Request'] = (self._parse_request, self._reform_request)
+        self.functions['Response'] = (self._parse_response,
+                                      self._reform_response)
         self.functions['Cookie'] = (self._parse_cookies, self._reform_cookies)
         self.functions['Set-Cookie'] = (self._parse_set_cookie,
                                         self._reform_set_cookie)
@@ -26,11 +30,9 @@ class Headers:
 
     def extract_headers(self, request):
         # Messages often have two types of newline characters. Strip one.
-        request = request.replace('\r', '')
         # Header section finishes with a double newline.
-        header_section = request.split('\n\n')[0]
         # Each header type is on a different line.
-        unparsed_headers = header_section.split('\n')
+        unparsed_headers = request.split(self.new_line)
         return unparsed_headers
 
     def parse_headers(self, unparsed_headers):
@@ -62,19 +64,13 @@ class Headers:
             else:
                 self.headers[header_type] = {"value": header_values}
 
+            self.header_types.append(header_type)
+
     def reform(self, header_types=None):
         if header_types is None:
-            header_types = self.headers.keys()
+            header_types = self.header_types
 
-        # Move request/response header to beginning.
-        if "Request" in header_types:
-            header_types.remove("Request")
-            output = [self.functions['Request'][1]()]
-        elif "Response" in header_types:
-            header_types.remove("Response")
-            output = [self.headers["Response"]['value']]
-        else:
-            output = []
+        output = []
 
         for header_type in header_types:
             try:
@@ -82,8 +78,12 @@ class Headers:
             except KeyError:
                 output.append("%s: %s" % (header_type,
                                           self.headers[header_type]['value']))
+            except TypeError:
+                # This occurs if a reform function is "None".
+                # This is the case for headers we don't want to pass on.
+                pass
 
-        return "\n".join(output)
+        return self.new_line.join(output)
 
     def encrypt_data(self):
         try:
@@ -134,6 +134,12 @@ class Headers:
             return "%s %s:%s %s" % (method, host, str(port), http_version)
         else:
             return "%s %s %s" % (method, host, http_version)
+
+    def _parse_response(self, values):
+        return {'value': values}
+
+    def _reform_response(self):
+        return self.headers["Response"]['value']
 
     def _parse_set_cookie(self, new_cookie_string):
         try:

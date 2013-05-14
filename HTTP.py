@@ -9,7 +9,7 @@ class HTTP_Message:
         self.raw = unparsed_message
         try:
             headers, data = unparsed_message.split('\r\n\r\n', 1)
-            headers = headers.replace('\r', '')
+            #headers = headers.replace('\r', '')
             self.headers = Headers(headers)
         except (ValueError, HeaderFormatError):
             self.headers = Headers("")
@@ -18,7 +18,7 @@ class HTTP_Message:
         self.data = data
 
     def reform(self):
-        message = self.headers.reform() + "\n\n" + self.data
+        message = self.headers.reform() + "\r\n\r\n" + self.data
         #message = message.replace('\n', '\n\r')
         return message
 
