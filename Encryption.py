@@ -1,5 +1,6 @@
 import Crypto.PublicKey.RSA as RSA
 import Crypto.Cipher.PKCS1_OAEP as PKCS1_OAEP
+import base64
 import Logger
 
 
@@ -10,44 +11,39 @@ class Encryption:
     def __init__(self):
         if not self.cipher:
             Logger.e("Loading certificate")
-            with open("../Certificates/server.pem") as key_file:
+            with open("../Certificates/server.der") as key_file:
                 key = RSA.importKey(key_file.read())
 
             self.cipher = PKCS1_OAEP.new(key)
 
-    def make_transmittable(self, value):
-        if value[:9] == "chainmail":
-            raise EncryptionError("Value passed is already a transmittable")
-        else:
-            ord_values = [ord(c) for c in value]
-            hash_values = ["{0:x}".format(c) for c in ord_values]
-            return "chainmail:" + ":".join(hash_values)
+    def encode(self, value):
+        return base64.b64encode(value)
 
-    def unmake_transmittable(self, value):
-        if value[:9] == "chainmail":
-            trimmed_value = value[10:]
-            hash_values = trimmed_value.split(":")
-            ord_values = [int(c, 16) for c in hash_values]
-            chr_values = [chr(c) for c in ord_values]
-            return "".join(chr_values)
-        else:
-            raise EncryptionError("Value passed is not a transmittable")
+    def decode(self, value):
+        return base64.b64decode(value)
 
-    def encrypt(self, value, make_transmittable=False):
-        if value == "":
-            return ""
-        elif make_transmittable:
-            return self.make_transmittable(self.cipher.encrypt(value))
-        else:
-            return self.cipher.encrypt(value)
+    def encrypt(self, value):
+        unencrypted_values = self._chunks(value, 80)
+        encrypted_values = [self._encrypt(v) for v in unencrypted_values]
+        return " ".join(encrypted_values)
 
-    def decrypt(self, value, unmake_transmittable=False):
-        if value == "":
-            return ""
-        elif unmake_transmittable:
-            return self.cipher.decrypt(self.unmake_transmittable(value))
-        else:
-            return self.cipher.decrypt(value)
+    def _encrypt(self, value):
+        return self.encode(self.cipher.encrypt(value))
+
+    def decrypt(self, value):
+        encrypted_values = value.split()
+        unencrypted_values = [self._decrypt(v) for v in encrypted_values]
+        return "".join(unencrypted_values)
+
+    def _decrypt(self, value):
+        Logger.e(len(self.decode(value)))
+        return self.cipher.decrypt(self.decode(value))
+
+    def _chunks(self, l, n):
+        """ Yield successive n-sized chunks from l.
+        """
+        for i in xrange(0, len(l), n):
+            yield l[i:i + n]
 
 
 class EncryptionError(Exception):
