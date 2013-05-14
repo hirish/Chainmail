@@ -3,6 +3,8 @@ import threading
 import select
 import Logger
 from HTTP import HTTP_Message
+from Encryption import Encryption
+from ChainmailError import ChainmailError
 
 BUFFER_SIZE = 32768
 
@@ -35,7 +37,12 @@ class Listener(threading.Thread):
 
             if len(data) == 0:
                 break
-            self.send(data)
+
+            try:
+                self.send(data)
+            except Exception as e:
+                Logger.e("Error: " + str(e))
+                break
 
         Logger.i("Quitting", self.__class__.__name__)
         self.stop = True
@@ -81,6 +88,13 @@ class ClientListener(Listener):
 
         if "Accept-Encoding" in headers:
             headers["Accept-Encoding"] = {'value': 'identity'}
+
+        if "chainmail-client-id" in headers:
+            encrypted_id = headers["chainmail-client-id"]["value"]
+            encryption = Encryption()
+            Logger.e("Chainmail ID: " + encryption.decrypt(encrypted_id))
+        else:
+            raise ChainmailError("No chainmail ID in request")
 
 
 class ServerListener(Listener):
