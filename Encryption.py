@@ -10,7 +10,7 @@ class Encryption:
 
     def __init__(self):
         if not self.cipher:
-            Logger.e("Loading certificate")
+            Logger.i("Loading certificate")
             with open("../Certificates/server.der") as key_file:
                 key = RSA.importKey(key_file.read())
 
@@ -22,13 +22,21 @@ class Encryption:
     def decode(self, value):
         return base64.b64decode(value)
 
-    def encrypt(self, value):
+    def encrypt(self, value, encoded_key=None):
+        if encoded_key is None:
+            cipher = self.cipher
+
+        else:
+            key = RSA.importKey(base64.b64decode(encoded_key))
+            cipher = PKCS1_OAEP.new(key)
+
         unencrypted_values = self._chunks(value, 80)
-        encrypted_values = [self._encrypt(v) for v in unencrypted_values]
+        encrypted_values = [self._encrypt(v, cipher)
+                            for v in unencrypted_values]
         return " ".join(encrypted_values)
 
-    def _encrypt(self, value):
-        return self.encode(self.cipher.encrypt(value))
+    def _encrypt(self, value, cipher):
+        return self.encode(cipher.encrypt(value))
 
     def decrypt(self, value):
         encrypted_values = value.split()
@@ -36,8 +44,11 @@ class Encryption:
         return "".join(unencrypted_values)
 
     def _decrypt(self, value):
-        Logger.e(len(self.decode(value)))
         return self.cipher.decrypt(self.decode(value))
+
+    def wrap(self, value, key):
+        inner = self.encrypt(value)
+        return self.encrypt(inner, key)
 
     def _chunks(self, l, n):
         """ Yield successive n-sized chunks from l.

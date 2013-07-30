@@ -16,6 +16,7 @@ class HTTP_Message:
             data = unparsed_message
 
         self.data = data
+        self.send = True
 
     def reform(self):
         message = self.headers.reform() + "\r\n\r\n" + self.data
@@ -35,3 +36,16 @@ class HTTP_Message:
         except KeyError:
             # Not compressed.
             pass
+
+    def recalculate_content_length(self):
+        try:
+            self.headers.headers["Content-Length"]['value'] = len(self.data)
+        except KeyError:
+            pass
+
+    def inject_sunlight(self):
+        sunlight = '<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>'
+        sunlight += '<script src="https://sunlight.henryirish.com/jquery.hammer.min.js"></script>'
+        sunlight += '<script src="https://sunlight.henryirish.com/sunlight.js"></script>'
+        if "<html" in self.data and "</body>" in self.data:
+            self.data = self.data.replace("</body>", sunlight + "</body>")

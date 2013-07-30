@@ -22,16 +22,17 @@ def extract_cookie_value(unparsed_cookie):
     return key, value
 
 
-def encrypt_set_cookies(set_cookies):
+def encrypt_set_cookies(set_cookies, wrap_key):
     encryption = Encryption()
     encrypted = []
     for key, value, metadata in set_cookies:
-        Logger.e("Encrypting " + str((key, value, metadata)))
+        Logger.d("Encrypting " + str((key, value, metadata)))
         try:
-            encrypted_value = encryption.encrypt(value, True)
+            encrypted_value = encryption.wrap(value, wrap_key)
         except EncryptionError as e:
             Logger.e("Couldn't encrypt key:%s - value:%s\n\t%s"
                      % (key, value, str(e)))
+            encrypted_value = value
         encrypted.append((key, encrypted_value, metadata))
     return encrypted
 
@@ -40,8 +41,9 @@ def decrypt_cookies(cookies):
     encryption = Encryption()
     decrypted = {}
     for key, value in cookies.iteritems():
+        Logger.d("Decrypting " + str((key, value)))
         try:
-            decrypted[key] = encryption.decrypt(value, True)
+            decrypted[key] = encryption.decrypt(value)
         except EncryptionError:
             pass
     return decrypted

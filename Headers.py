@@ -56,6 +56,14 @@ class Headers:
                 header_type, header_values = unparsed_header.split(':', 1)
                 header_values = header_values.strip()
 
+            if header_type in ["Connection", "Proxy-Connection"]:
+                # Connection headers are for proxies, so we won't forward them.
+                continue
+
+            if header_type in ["If-Modified-Since", "If-None-Match"]:
+                # Non cacheing
+                continue
+
             # Call a parsing function, if it exists.
             if header_type in self.functions:
                 function = self.functions[header_type][0]
@@ -64,7 +72,8 @@ class Headers:
             else:
                 self.headers[header_type] = {"value": header_values}
 
-            self.header_types.append(header_type)
+            if not header_type in self.header_types:
+                self.header_types.append(header_type)
 
     def reform(self, header_types=None):
         if header_types is None:
@@ -73,6 +82,10 @@ class Headers:
         output = []
 
         for header_type in header_types:
+            if header_type[:16] == "chainmail-client":
+                # We don't want to forward chainmail messages to the server..
+                continue
+
             try:
                 output.append(self.functions[header_type][1]())
             except KeyError:
@@ -85,9 +98,10 @@ class Headers:
 
         return self.new_line.join(output)
 
-    def encrypt_data(self):
+    def encrypt_data(self, key):
         try:
-            self.set_cookies = Cookies.encrypt_set_cookies(self.set_cookies)
+            self.set_cookies = Cookies.encrypt_set_cookies(self.set_cookies,
+                                                           key)
         except:
             pass
 
@@ -156,27 +170,29 @@ class Headers:
         for set_cookie in self.set_cookies:
             key, value, metacookie = set_cookie
             if not metacookie == "":
-                to_return.append("Set-Cookie: %s=\"%s\";%s" % set_cookie)
+                to_return.append("Set-Cookie: %s=%s;%s" % set_cookie)
             else:
-                to_return.append("Set-Cookie: %s=\"%s\"" % key, value)
-        return "\n".join(to_return)
+                to_return.append("Set-Cookie: %s=%s" % key, value)
+        return self.new_line.join(to_return)
 
     def _parse_cookies(self, cookie_string):
         try:
             self.cookies
         except:
             self.cookies = {}
+            self.cookies_order = []
 
         unparsed_cookies = cookie_string.split(";")
         for unparsed_cookie in unparsed_cookies:
                 key, value = Cookies.extract_cookie_value(unparsed_cookie)
                 self.cookies[key] = value
+                self.cookies_order.append(key)
 
         return self.cookies
 
     def _reform_cookies(self):
-        combined = ["%s=\"%s\"" % (k, v) for k, v in self.cookies.iteritems()]
-        return "Cookie: " + "; ".join(combined) + ";"
+        combined = ["%s=%s" % (k, self.cookies[k]) for k in self.cookies_order]
+        return "Cookie: " + "; ".join(combined)
 
 
 class HeaderFormatError:

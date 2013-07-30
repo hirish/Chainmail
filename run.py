@@ -1,7 +1,7 @@
 from ProxyServer import ProxyServer
 
 if __name__ == '__main__':
-    server = ProxyServer('0.0.0.0', 8080)
+    server = ProxyServer('0.0.0.0', 9084)
     try:
         server.run()
     except KeyboardInterrupt:
