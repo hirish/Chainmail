@@ -25,16 +25,11 @@ def file_printer(messages):
     if not Logger.log_file:
         Logger.log_file = open("log", "w+")
 
-    for message in messages:
-        Logger.log_file.write(message)
-    Logger.log_file.write("\n")
+    Logger.log_file.write(messages[0] + " ".join(messages[1:]) + "\n\n")
 
 
-def console_printer(coloured_messages):
-    for coloured_message in coloured_messages:
-        message, colour = coloured_message
-        print colored(message, colour),
-    print ""  # Trailing new line.
+def console_printer(messages):
+    print messages[0] + " ".join(messages[1:])
 
 
 def printer(messages, level):
