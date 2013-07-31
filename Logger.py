@@ -2,12 +2,12 @@ import time
 from termcolor import colored
 
 LEVELS = [
-    {'name': 'ERROR', 'colour': 'red'},
-    {'name': 'WARNING', 'colour': 'orange'},
-    {'name': 'INFORMATION', 'colour': 'yellow'},
-    {'name': 'DEBUG', 'colour': 'green'},
-    {'name': 'VERBOSE', 'colour': 'blue'},
-    {'name': 'VERBOSE VERBOSE', 'colour': 'magenta'},
+    {'name': 'ERROR', 'colour': 'red', 'attributes': ['bold']},
+    {'name': 'WARNING', 'colour': 'yellow', 'attributes': ['bold']},
+    {'name': 'INFORMATION', 'colour': 'magenta', 'attributes': []},
+    {'name': 'DEBUG', 'colour': 'blue', 'attributes': []},
+    {'name': 'VERBOSE', 'colour': 'cyan', 'attributes': []},
+    {'name': 'VERBOSE VERBOSE', 'colour': 'green', 'attributes': []},
 ]
 
 HEADER_COLOUR = 'grey'
@@ -49,13 +49,14 @@ def printer(messages, level):
 
         if Logger.console_logging:
             colour = LEVELS[level]['colour']
+            attributes = LEVELS[level]['attributes']
 
-            coloured_header_string = (header_string, HEADER_COLOUR)
-            coloured_messages = zip(messages, [colour] * len(messages))
-            coloured_headered_messages = ([coloured_header_string]
-                                          + coloured_messages)
+            header_string = colored(header_string, HEADER_COLOUR)
+            messages = [colored(message, colour, attrs=attributes)
+                        for message in messages]
+            headered_messages = [header_string] + messages
 
-            console_printer(coloured_headered_messages)
+            console_printer(headered_messages)
 
 
 def e(*messages):
