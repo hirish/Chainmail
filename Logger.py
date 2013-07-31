@@ -1,50 +1,82 @@
 from termcolor import colored
 import time
 
-FILE_LOGGING = True
+LEVELS = [
+    {'name': 'ERROR', 'colour': 'red'},
+    {'name': 'WARNING', 'colour': 'orange'},
+    {'name': 'INFORMATION', 'colour': 'yellow'},
+    {'name': 'DEBUG', 'colour': 'green'},
+    {'name': 'VERBOSE', 'colour': 'blue'},
+    {'name': 'VERBOSE VERBOSE', 'colour': 'magenta'},
+]
 
-if FILE_LOGGING:
-    try:
-        log_file
-    except NameError:
-        log_file = open("log", "w+")
-
-
-def printer(messages, colour):
-    now = time.asctime(time.localtime(time.time()))
-    now_string = "%s: %s\n" % (now, colour)
-
-    if FILE_LOGGING:
-        log_file.write(now_string)
-    print colored(now_string, colour),
-
-    for message in messages:
-        message = str(message).replace("\r", "")
-        print colored(message, colour),
-
-        if FILE_LOGGING:
-            log_file.write(message)
-
-    print ""
-    if FILE_LOGGING:
-        log_file.write("\n")
+HEADER_COLOUR = 'grey'
 
 
-def e(*messages):
-    printer(messages, 'red')
+class Logger:
 
+    file_logging = True
+    console_logging = True
+    output_level = 5
 
-def i(*messages):
-    printer(messages, 'green')
+    log_file = None
 
+    def __init__(self, file_log=True, console_log=True, output_level=5):
+        self.file_logging = file_log
+        self.console_logging = console_log
+        self.output_level = output_level
 
-def v(*messages):
-    printer(messages, 'yellow')
+        self.get_log_file()
 
+    def get_log_file(self):
+        if self.file_logging:
+            self.log_file = open("log", "w+")
 
-def d(*messages):
-    printer(messages, 'magenta')
+    def file_printer(self, messages):
+        for message in messages:
+            self.log_file.write(message)
+        self.log_file.write("\n")
 
+    def console_printer(self, coloured_messages):
+        for coloured_message in coloured_messages:
+            message, colour = coloured_message
+            print colored(message, colour),
+        print ""  # Trailing new line.
 
-def w(*messages):
-    printer(messages, 'blue')
+    def printer(self, messages, level):
+        if level <= self.output_level:
+            now = time.asctime(time.localtime(time.time()))
+            header_string = "%s: %s\n" % (now, LEVELS[level]['name'])
+
+            headered_messages = [header_string] + messages
+
+            if self.file_logging:
+                self.file_printer(headered_messages)
+
+            if self.console_logging:
+                colour = LEVELS[level]['colour']
+
+                coloured_header_string = (header_string, HEADER_COLOUR)
+                coloured_messages = zip(messages, [colour] * len(messages))
+                coloured_headered_messages = ([coloured_header_string]
+                                              + coloured_messages)
+
+                self.console_printer(coloured_headered_messages)
+
+    def e(self, *messages):
+        self.printer(messages, 0)
+
+    def w(self, *messages):
+        self.printer(messages, 1)
+
+    def i(self, *messages):
+        self.printer(messages, 2)
+
+    def d(self, *messages):
+        self.printer(messages, 3)
+
+    def v(self, *messages):
+        self.printer(messages, 4)
+
+    def vv(self, *messages):
+        self.printer(messages, 5)
