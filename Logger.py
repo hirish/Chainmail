@@ -23,7 +23,7 @@ class Logger:
 
 def file_printer(messages):
     if not Logger.log_file:
-        Logger.log_file = open("log", "w+")
+        Logger.log_file = open("log", "a")
 
     Logger.log_file.write(messages[0] + " ".join(messages[1:]) + "\n\n")
 
