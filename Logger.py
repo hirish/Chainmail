@@ -37,7 +37,8 @@ def printer(messages, level):
         now = time.asctime(time.localtime(time.time()))
         header_string = "%s: %s\n" % (now, LEVELS[level]['name'])
 
-        headered_messages = [header_string] + list(messages)
+        messages = map(str, messages)
+        headered_messages = [header_string] + messages
 
         if Logger.file_logging:
             file_printer(headered_messages)
