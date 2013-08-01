@@ -64,32 +64,32 @@ def printer(messages, formatting):
 
 
 def syserr(*messages):
-    printer(messages, FORMATS(0))
+    printer(messages, FORMATS[0])
 
 
 def syswarn(*messages):
-    printer(messages, FORMATS(1))
+    printer(messages, FORMATS[1])
 
 
 def sysinfo(*messages):
-    printer(messages, FORMATS(2))
+    printer(messages, FORMATS[2])
 
 
 def dataerr(*messages):
-    printer(messages, FORMATS(3))
+    printer(messages, FORMATS[3])
 
 
 def datawarn(*messages):
-    printer(messages, FORMATS(4))
+    printer(messages, FORMATS[4])
 
 
 def databold(*messages):
-    printer(messages, FORMATS(5))
+    printer(messages, FORMATS[5])
 
 
 def datainfo(*messages):
-    printer(messages, FORMATS(6))
+    printer(messages, FORMATS[6])
 
 
 def other(*messages):
-    printer(messages, FORMATS(7))
+    printer(messages, FORMATS[7])
