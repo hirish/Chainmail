@@ -39,11 +39,11 @@ class Listener(threading.Thread):
         except IndexError:
             Logger.databold(header_text)
         if (len(message.data) > 500):
-            Logger.other(message.data[:100])
-            Logger.other("...")
-            Logger.other(message.data[-100:])
+            Logger.datainfo(message.data[:100])
+            Logger.datainfo("...")
+            Logger.datainfo(message.data[-100:])
         elif (len(message.data) > 0):
-            Logger.other(message.data)
+            Logger.datainfo(message.data)
         Logger.other(symbol * 20)
 
     def set_paired_listener(self, paired_listener):
