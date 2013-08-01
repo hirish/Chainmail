@@ -27,25 +27,24 @@ class Listener(threading.Thread):
         message.recalculate_content_length()
         self.output_socket.sendall(message.reform())
 
-        #Logger.e(data)
         self.print_send(message)
 
     def _print_send(self, message, symbol):
-        Logger.w(symbol * 20)
+        Logger.other(symbol * 20)
         header_text = message.headers.reform()
         try:
             split_headers = header_text.split("\n", 1)
-            Logger.w(split_headers[0])
-            Logger.d(split_headers[1] + "\n")
+            Logger.databold(split_headers[0])
+            Logger.datainfo(split_headers[1] + "\n")
         except IndexError:
-            Logger.w(header_text)
+            Logger.databold(header_text)
         if (len(message.data) > 500):
-            Logger.v(message.data[:100])
-            Logger.v("...")
-            Logger.v(message.data[-100:])
+            Logger.other(message.data[:100])
+            Logger.other("...")
+            Logger.other(message.data[-100:])
         elif (len(message.data) > 0):
-            Logger.v(message.data)
-        Logger.w(symbol * 20)
+            Logger.other(message.data)
+        Logger.other(symbol * 20)
 
     def set_paired_listener(self, paired_listener):
         self.paired_listener = paired_listener
@@ -81,7 +80,7 @@ class ClientListener(Listener):
             received = prereceived_data
 
         received += self.listen_socket.recv(BUFFER_SIZE)
-        Logger.v("=============\n", received, "\n=============")
+        #Logger.other("=============\n", received, "\n=============")
 
         if len(received) == 0:
             self.send_received_data()

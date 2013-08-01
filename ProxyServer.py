@@ -32,7 +32,7 @@ class ProxyServer:
         self.listeners = {self.proxy_socket: None}
         self.pairs = {}
 
-        Logger.i("Listening on ", self.proxy_socket)
+        Logger.sysinfo("Listening on ", self.proxy_socket)
 
     def run(self):
         while True:
@@ -44,18 +44,18 @@ class ProxyServer:
                     try:
                         self.accept_connection()
                     except Exception as e:
-                        Logger.e("Failed to accept connection.")
-                        Logger.e(traceback.format_exc())
+                        Logger.syserr("Failed to accept connection.")
+                        Logger.syserr(traceback.format_exc())
                 else:
                     try:
                         self.listeners[socket].receive()
                     except SocketClosed:
-                        Logger.i("Closing socket pair...")
+                        Logger.sysinfo("Closing socket pair...")
                         self.close_connection(socket)
                     except Exception as e:
-                        Logger.e("Exception occurred, closing sockets...")
-                        Logger.e(str(e))
-                        Logger.e(traceback.format_exc())
+                        Logger.syserr("Exception occurred, closing sockets...")
+                        Logger.syserr(str(e))
+                        Logger.syserr(traceback.format_exc())
                         self.close_connection(socket)
 
     def close_connection(self, socket):
@@ -80,30 +80,30 @@ class ProxyServer:
         # Take some data from the connection, so we can see who to proxy to
         data = client_socket.recv(BUFFER_SIZE)
         if data == "":
-            Logger.e("Empty request")
+            Logger.syserr("Empty request")
             return
 
         # Interpret the headers and pull out the host and port.
         try:
             headers = Headers(data)
         except Exception as e:
-            Logger.e("Header exception when accepting connection")
-            Logger.e(traceback.format_exc())
-            Logger.e(data)
+            Logger.syserr("Header exception when accepting connection")
+            Logger.syserr(traceback.format_exc())
+            Logger.syserr(data)
             raise e
 
         try:
             server_host = headers.headers['Request']['host'].split('/')[0]
             server_port = headers.headers['Request']['port']
             server_address = (server_host, server_port)
-            Logger.i("Connecting to %s on port %s" % server_address)
+            Logger.sysinfo("Connecting to %s on port %s" % server_address)
         except KeyError:
-            Logger.e("Invalid request\n", data)
+            Logger.syserr("Invalid request\n", data)
             return
 
         if headers.headers['Request']['method'] == "CONNECT":
-            Logger.v("==============\n%s\n==============" % data)
-            Logger.v("<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % CONNECT_RESPONSE)
+            Logger.other("==============\n%s\n==============" % data)
+            Logger.other("<<<<<<<<<<<<<<\n%s\n<<<<<<<<<<<<<<" % CONNECT_RESPONSE)
             client_socket.send(CONNECT_RESPONSE)
 
             cert_file, key_file = self.cert_store.get_cert(server_host, [])
@@ -116,7 +116,7 @@ class ProxyServer:
             try:
                 client_socket.do_handshake()
             except (ssl.SSLError, socket.error) as error:
-                Logger.e("SSL Error", error)
+                Logger.syserr("SSL Error", error)
                 return
 
             server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -131,11 +131,11 @@ class ProxyServer:
                 server_socket.connect(server_address)
                 #match_hostname(server_socket.getpeercert(), server_host)
             except ssl.SSLError:
-                Logger.e("Server certificate not signed by trusted authority.")
+                Logger.syserr("Server certificate not signed by trusted authority.")
                 return
             except CertificateError as ce:
-                Logger.e("Server certificate does not match hostname.")
-                Logger.e(str(ce))
+                Logger.syserr("Server certificate does not match hostname.")
+                Logger.syserr(str(ce))
                 return
 
             # The data received was a "CONNECT" request, we don't need to
@@ -157,5 +157,4 @@ class ProxyServer:
         self.listeners[server_socket] = server_listener
 
         if data:
-            Logger.e("WRITING DATA", data)
             client_listener.receive(prereceived_data = data)
